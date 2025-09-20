@@ -1,0 +1,22 @@
+PODS:
+  - Flutter (1.0.0)
+  - jp_transliterate (0.0.1):
+    - Flutter
+
+DEPENDENCIES:
+  - Flutter (from `Flutter`)
+  - jp_transliterate (from `.symlinks/plugins/jp_transliterate/ios`)
+
+EXTERNAL SOURCES:
+  Flutter:
+    :path: Flutter
+  jp_transliterate:
+    :path: ".symlinks/plugins/jp_transliterate/ios"
+
+SPEC CHECKSUMS:
+  Flutter: e0871f40cf51350855a761d2e70bf5af5b9b5de7
+  jp_transliterate: 2d3bd53a73eb22409d735a7c84238c23fa95e3b4
+
+PODFILE CHECKSUM: 4305caec6b40dde0ae97be1573c53de1882a07e5
+
+COCOAPODS: 1.16.2
