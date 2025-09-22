@@ -12,6 +12,7 @@ Future<String> generateResponse(List<String> inputList) async {
   module1에서 indexing한 키워드들의 리스트를 받아서 chatGPT에게 입력으로 전달한다.
   chatGPT는 프롬프트를 따라 로마자, 번역, 더블메타폰 형태를 쉼표와 []로 구분된
   String 으로 return 해준다. 그리고 이 함수는 그 String을 return한다.
+  response는 [로마자, 번역, 더블 메타폰]형식.
   */
   await dotenv.load(fileName: '.env');
 
