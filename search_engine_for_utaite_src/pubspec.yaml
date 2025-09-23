@@ -38,6 +38,9 @@ dependencies:
   korean_romanization_converter: ^0.0.1
   http: ^1.5.0
   flutter_dotenv: ^6.0.0
+  dart_phonetics: ^1.0.1
+  path_provider: ^2.1.5
+  dotenv: ^3.0.0
   
 
 dev_dependencies:
@@ -65,6 +68,7 @@ flutter:
   # To add assets to your application, add an assets section, like this:
   assets:
   - .env
+  - lib/test_cases.txt
   #   - images/a_dot_burr.jpeg
   #   - images/a_dot_ham.jpeg
 

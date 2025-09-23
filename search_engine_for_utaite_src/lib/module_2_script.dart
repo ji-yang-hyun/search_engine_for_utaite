@@ -1,5 +1,6 @@
 import 'dart:convert';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
+// import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:dotenv/dotenv.dart' as dotenv;
 import 'package:http/http.dart' as http;
 
 final String apiUrl = 'https://api.openai.com/v1/chat/completions';
@@ -14,9 +15,14 @@ Future<String> generateResponse(List<String> inputList) async {
   String 으로 return 해준다. 그리고 이 함수는 그 String을 return한다.
   response는 [로마자, 번역, 더블 메타폰]형식.
   */
-  await dotenv.load(fileName: '.env');
+  // await dotenv.load(fileName: '.env');
 
-  String apiKey = dotenv.env['API_KEY']!;
+  // String apiKey = dotenv.env['API_KEY']!;
+
+  dotenv.load('search_engine_for_utaite_src/.env');
+
+  String? apiKey = dotenv.env['API_KEY'];
+
   String token = "Bearer $apiKey";
 
   var response = await http.post(
@@ -78,17 +84,22 @@ List<List<String>> responseFetch(String response, int keywordCount) {
   return result;
 }
 
-void module2(List<String> stringSplit) async {}
-
-void main() {
-  print(
-    responseFetch(
-      "[yooei, dazeubi, yoshino, phone],[yooei, dazeubi, yoshino, phone],[Y, A, TSP, TSP, AHSN, YXN, FN, FN]",
-      4,
-    ),
+Future<List<List<String>>> module2(List<String> keywordSplit) async {
+  String response = await generateResponse(keywordSplit);
+  List<List<String>> keyword3form = responseFetch(
+    response,
+    keywordSplit.length,
   );
-  // print(["하이", "사랑", "吉乃", "phone"].toString());
+
+  return keyword3form;
 }
+
+// void main() {
+//   generateResponse(["하이", "사랑", "吉乃", "phone"]).then((value) {
+//     print(value);
+//   });
+//   // print(["하이", "사랑", "吉乃", "phone"].toString());
+// }
 
 /*
 [하이, 안녕, 吉乃, phone]

@@ -13,9 +13,20 @@ List<String> stopwords = [
   "고음질",
   "official",
   "channel",
+  "자막",
+  "가사",
+  "해석",
+  "한글",
+  "official",
+  "music",
+  "video",
 ];
 
 List<String> module1(String title, String channel) {
+  /*
+  우타이테 전용 인덱싱
+  제목과 채널이름을 매개변수로 받아 키워드 리스트를 return 한다.
+  */
   // 불용어 제거
   for (String keyword in stopwords) {
     title = title.replaceAll(keyword, '');
