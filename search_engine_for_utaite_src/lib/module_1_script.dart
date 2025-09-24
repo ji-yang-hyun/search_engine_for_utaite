@@ -1,4 +1,15 @@
-List<String> keyword_to_split = ["/", "-", "(", ")", "[", "]"];
+List<String> keyword_to_split = [
+  "/",
+  "-",
+  "(",
+  ")",
+  "[",
+  "]",
+  ";",
+  "／",
+  "「",
+  "」",
+];
 List<String> stopwords = [
   "cover",
   "불러보았다",
@@ -20,6 +31,7 @@ List<String> stopwords = [
   "official",
   "music",
   "video",
+  ",", // 나중에 리스트 구분과 헷갈리지 않기 위해 꼭 필요하다.
 ];
 
 List<String> module1(String title, String channel) {
@@ -27,6 +39,9 @@ List<String> module1(String title, String channel) {
   우타이테 전용 인덱싱
   제목과 채널이름을 매개변수로 받아 키워드 리스트를 return 한다.
   */
+
+  title = title.toLowerCase();
+  channel = channel.toLowerCase();
   // 불용어 제거
   for (String keyword in stopwords) {
     title = title.replaceAll(keyword, '');
@@ -67,6 +82,14 @@ List<String> module1(String title, String channel) {
   titleSplit.addAll(newTitleSplit);
 
   //그리고 splt때문에 비어있는 부분들 없애주자.
+
+  for (int i = 0; i < titleSplit.length; i++) {
+    titleSplit[i] = titleSplit[i].trim();
+  }
+  for (int i = 0; i < channelSplit.length; i++) {
+    channelSplit[i] = channelSplit[i].trim();
+  }
+
   channelSplit = channelSplit.toSet().toList();
   titleSplit = titleSplit.toSet().toList();
 
