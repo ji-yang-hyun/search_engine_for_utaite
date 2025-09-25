@@ -1,19 +1,20 @@
 import 'dart:convert';
 // import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:dart_phonetics/dart_phonetics.dart';
 import 'package:dotenv/dotenv.dart' as dotenv;
 import 'package:http/http.dart' as http;
 
 final String apiUrl = 'https://api.openai.com/v1/chat/completions';
 
 String prompt =
-    "The elements in the given list are separated by commas. Convert the given list into Romanized form, translated form, and Double Metaphone form.	•	Romanized form means converting everything into Romanization, regardless of the original language. Use only lowercase alphabets. All spaces must be removed when converting into Romanized form.	•	Translated form means converting everything into English, regardless of the original language.	• The Double Metaphone form must be generated based on the Romanized form. In this process, all spaces in the Romanized text must be removed. In other words, each list element (separated by commas) should be treated as a single string without spaces and commas when converting to Double Metaphone. (Example: “gilgo jjalbeun chugje” -> “KLPJNXJ”)	•	Double Metaphone form includes both primary and secondary results, so the resulting array will be twice as long. In the generated answer, commas must never be used for anything other than separating list elements. Example: Input: [안녕, 吉乃, 길고 짧은 축제] Romanized form: [annyeong, yoshino, gilgo jjalbeun chugje] Translated form: [hello, yoshino, long and short festival] Double Metaphone form: [ANNK, ANNK, AHSN, YXN, KLPJNXJ, KLPJNXJ] Output should be exactly three result lists printed in order, without any extra words or Markdown formatting. Example Input: [안녕, 吉乃, 길고 짧은 축제] Example Output: [annyeong, yoshino, gilgo jjalbeun chugje],[hello, yoshino, long and short festival],[ANNK, ANNK, AHSN, YXN, KLPJNXJ, KLPJNXJ]";
+    "The given list elements are separated by commas.Convert the given list into Romanized form and Translated form. \n•	Romanized form means converting everything into Romanization, regardless of the original language.\n•	Translated form means converting everything into English, regardless of the original language.\n•	The lists will mainly contain Korean, English, and Japanese.\nExample input: [안녕, 吉乃, 길고 짧은 축제] \nExample output: [annyeong, yoshino, gilgo jjalbeun chugje],[hello, yoshino, long and short festival] \n When outputting, print only the two resulting lists in order. Do not use Markdown syntax, extra words, or commas for anything other than separating list elements or separating the two result lists.";
 
 Future<String> generateResponse(List<String> inputList) async {
   /*
   module1에서 indexing한 키워드들의 리스트를 받아서 chatGPT에게 입력으로 전달한다.
-  chatGPT는 프롬프트를 따라 로마자, 번역, 더블메타폰 형태를 쉼표와 []로 구분된
+  chatGPT는 프롬프트를 따라 로마자, 번역 형태를 쉼표와 []로 구분된
   String 으로 return 해준다. 그리고 이 함수는 그 String을 return한다.
-  response는 [로마자, 번역, 더블 메타폰]형식.
+  response는 [로마자, 번역]형식.
   */
   // await dotenv.load(fileName: '.env');
 
@@ -46,6 +47,24 @@ Future<String> generateResponse(List<String> inputList) async {
   }
 }
 
+List<String> romanizedToDoubleMetaPhone(List<String> romanizedList) {
+  List<String> result = [];
+  final doubleMetaphone = DoubleMetaphone.withMaxLength(100);
+  for (String romanized in romanizedList) {
+    final encoding = doubleMetaphone.encode(romanized);
+    List<String> doubleMetaphoneList = [encoding?.primary ?? ""];
+    doubleMetaphoneList += encoding!.alternates!.toList();
+
+    if (doubleMetaphoneList.length != 2) {
+      print("wrond");
+    }
+
+    result += doubleMetaphoneList;
+  }
+
+  return result;
+}
+
 Future<List<List<String>>> responseFetch(
   String response,
   int keywordCount,
@@ -68,31 +87,25 @@ Future<List<List<String>>> responseFetch(
   response = response.replaceAll("\n", "");
   responseSplit = response.split(',');
 
-  if (keywordCount * 4 == responseSplit.length) {
+  if (keywordCount * 2 == responseSplit.length) {
     print("good");
   } else {
     print("wrong response try again");
-    module2(keywords).then((value) {
-      return value;
-    });
-    // print(responseSplit.length);
-    // print(response);
-    // print(keywordCount);
-    // print(response);
-    // print("\n\n\n\n");
-    //chatGPT가 알맞은 응답을 주지 않았기 때문에 다시 generateResponse해야한다.
+    var value = await module2(keywords);
+    return value;
   }
 
-  int o = 0;
   for (int i = 0; i < responseSplit.length; i++) {
-    if (i == keywordCount) {
-      o += 1;
+    if (i < responseSplit.length / 2) {
+      romanized.add(responseSplit[i].trim());
+    } else {
+      translated.add(responseSplit[i].trim());
     }
-    if (i == keywordCount * 2) {
-      o += 1;
-    }
-    result[o].add(responseSplit[i].trim());
   }
+
+  doubleMetaphone = romanizedToDoubleMetaPhone(romanized);
+
+  result = [romanized, translated, doubleMetaphone];
 
   return result;
 }
@@ -140,52 +153,6 @@ Future<List<List<String>>> module2(List<String> keywordSplit) async {
 //   ]).then((value) {});
 // }
 
-/*
-[하이, 안녕, 吉乃, phone]
-주어진 리스트를 로마자 형태, 번역 형태, 더블 메타폰형태로 바꿔줘.
-로마자 형태는 언어에 상관 없이 전부 로마자 표기로 바꾸는 걸 말해.
-번역 형태는 어떤 언어던지 전부 영어로 번역하여 표기하는 걸 말해.
-더블 메타폰 형태는 로마자 형태로 변형된 리스트를 전부 더블 메타폰 형태로 바꾸는 걸 말해.
-더블 메타폰 형태는 primary와 secondary가 있어. 둘 다 포함할거기 때문에
-더블 메타폰 형태로 변환된 배열은 길이가 두 배가 돼.
-첫 형태의 배열 : [안녕, 吉乃, 길고 짧은 축제]
-로마자 형태 : [annyeong, yoshino, gilgo jjalbeun chugje]
-번역 형태 : [hello, yoshino, long and short festival]
-더블 메타폰 형태 : [ANNK, ANNK, AHSN, YXN, KLPJNXJ, KLPJNXJ]
-출력은 아무런 말이나 마크다운 문법 없이 세 개의 결과 리스트를 차례로 출력해주면 돼.
-
-입출력 예시)
-입력 : [안녕, 吉乃, 길고 짧은 축제]
-출력 : 
-[annyeong, yoshino, gilgo jjalbeun chugje]
-[hello, yoshino, long and short festival]
-[ANNK, ANNK, AHSN, YXN, KLPJNXJ, KLPJNXJ]
-*/
-
-
-/*
-[하이, 안녕, 吉乃, phone]
-Convert the given list into Romanized form, translated form, and Double Metaphone form.
-	•	Romanized form means converting everything into Romanization, regardless of the original language. Use only lowercase alphabets.
-	•	Translated form means converting everything into English, regardless of the original language.
-	• Double Metaphone form means converting the Romanized list into Double Metaphone codes.
-  • When converting into Double Metaphone form, all spaces in the Romanized text must be removed.
-	•	Double Metaphone form includes both primary and secondary results, so the resulting array will be twice as long.
-
-Example:
-Input: [안녕, 吉乃, 길고 짧은 축제]
-Romanized form: [annyeong, yoshino, gilgo jjalbeun chugje]
-Translated form: [hello, yoshino, long and short festival]
-Double Metaphone form: [ANNK, ANNK, AHSN, YXN, KLPJNXJ, KLPJNXJ]
-
-Output should be exactly three result lists printed in order, without any extra words or Markdown formatting.
-
-Example Input: [안녕, 吉乃, 길고 짧은 축제]
-Example Output:
-[annyeong, yoshino, gilgo jjalbeun chugje]
-[hello, yoshino, long and short festival]
-[ANNK, ANNK, AHSN, YXN, KLPJNXJ, KLPJNXJ]
-*/
 
 /*
 우려했던 ai사용의 문제점이 나타났다.
@@ -204,49 +171,50 @@ ai는 어쩔 수 없이 답변이 매 번 다를 수 밖에 없으니까 에러�
 
 
 /*
-[
-    "그래서 나는 음악을 그만두었다",
-    "요루시카",
-    "다즈비",
-    "그래서",
-    "나는",
-    "음악을",
-    "그만두었다",
-    "dzb",
-  ]
-[geuraeseo naneun eumageul geumandueotda, yorushika, dazubi, geuraeseo, naneun, eumageul, geumandueotda, dzb],
-[so i quit music, yorushika, dazubi, so, i, music, quit, dzb],
-[KRSNNNEMKLKMNTT, KRSNNNEMKLKMNTT, YRXK, YRSK, TSP, TSP, KRSNNN, KRSNNN, NN, NN, AMKL, AMKL, KMNTT, KMNTT, TSP, TSP]
+내가 이 결과를 디버깅을 할 수가 없으니까 몰랐는데 더블 메타폰 결괏값 개판이였네.
+조졌다 ㅎㅎㅎ
 
-
+결과가 일정하지도 못 하고, 결과 퀄리티도 그닥이고, ai부담도 줄여줄 겸 그냥 더블메타폰은 페키지로 바꾸자... ㅋㅋ;
+겸사겸사 번역 관련된것도 좀 손 대볼까?
+LLM이 설마 번역을 못해줄까
+근데 굳이? 저번에 썼듯이 한국어로 번역된걸 일본어 병음으로 검색하는것만 아니면 거의 모든 케이스가 가능해서
+아 근데 영어로 번역된 제목... 아냐 근데 그것도 극소수니까 일단은 이렇게 놓자.
 */
 
-
-
 /*
-guraeseo naneun eumageul geumandueotda, yorushika, dazbii, guraeseo, naneun, eumageul, geumandueotda, dzb,
-therefore i stopped music, yorushika, dazbii, therefore, i, music, stopped, dzb,
-KRS, KRS, NNNN, NNNN, AMKLKMNTRT, AMKLKMNTRT, ARXK, TRXK, TSP, TSP, KRS, KRS, NNNN, NNNN, AMKL, AMKL, KMNTRT, KMNTRT, TSP, TSP
-*/
+[하이, 안녕, 吉乃, phone]
+주어진 리스트의 각 요소들은 콤마로 구분돼있어.
+주어진 리스트를 로마자 형태와 번역 형태로 바꿔줘.
+로마자 형태는 언어에 상관 없이 전부 로마자 표기로 바꾸는 걸 말해.
+번역 형태는 어떤 언어던지 전부 영어로 번역하여 표기하는 걸 말해.
+리스트는 주로 한국어, 영어, 일본어가 사용될거야.
+
+첫 형태의 배열 : [안녕, 吉乃, 길고 짧은 축제]
+로마자 형태 : [annyeong, yoshino, gilgo jjalbeun chugje]
+번역 형태 : [hello, yoshino, long and short festival]
+출력은 아무런 말이나 마크다운 문법 없이 두 개의 결과 리스트를 차례로 출력해주면 돼.
+리스트의 요소 구분 외에 다른 용도로는 절대 콤마를 사용하면 안 돼.
+
+입출력 예시)
+입력 : [안녕, 吉乃, 길고 짧은 축제]
+출력 : 
+[annyeong, yoshino, gilgo jjalbeun chugje]
+[hello, yoshino, long and short festival]
 
 
-/*
-주어진 리스트를 로마자 형태, 번역 형태, 더블 메타폰 형태로 변환하시오.
-• 로마자 형태는 모든 언어를 로마자 표기로 변환하며, 알파벳은 모두 소문자만 사용한다.
-• 번역 형태는 모든 언어를 영어로 번역한다.
-• 더블 메타폰 형태는 로마자 형태를 기준으로 변환한다. 이때 로마자 표기에서 띄어쓰기를 모두 제거해야 한다. 즉 리스트의 요소 하나는 띄어쓰기 없는 하나의 문자열로 보고 더블 메타폰으로 변환하여야 한다.
-(예시 "gilgo jjalbeun chugje" -> "KLPJNXJ")
-• 더블 메타폰 형태는 1차 결과와 2차 결과를 모두 포함해야 하므로, 결과 배열은 두 배 길이가 된다.
+The given list elements are separated by commas.
+Convert the given list into Romanized form and Translated form.
+	•	Romanized form means converting everything into Romanization, regardless of the original language.
+	•	Translated form means converting everything into English, regardless of the original language.
+	•	The lists will mainly contain Korean, English, and Japanese.
 
+Example input:
+[안녕, 吉乃, 길고 짧은 축제]
 
-예시:
-입력: [안녕, 吉乃, 길고 짧은 축제]
-로마자 형태: [annyeong, yoshino, gilgo jjalbeun chugje]
-번역 형태: [hello, yoshino, long and short festival]
-더블 메타폰 형태: [ANNK, ANNK, AHSN, YXN, KLPJNXJ, KLPJNXJ]
+Example output:
+[annyeong, yoshino, gilgo jjalbeun chugje]
+[hello, yoshino, long and short festival]
 
-출력은 반드시 세 개의 결과 리스트만 순서대로, 불필요한 단어나 마크다운 없이 작성한다.
-
-예시 입력: [안녕, 吉乃, 길고 짧은 축제]
-예시 출력: [annyeong, yoshino, gilgo jjalbeun chugje],[hello, yoshino, long and short festival],[ANNK, ANNK, AHSN, YXN, KLPJNXJ, KLPJNXJ]
+When outputting, print only the two resulting lists in order.
+Do not use Markdown syntax, extra words, or commas for anything other than separating list elements.
 */

@@ -18,15 +18,39 @@ List<String> testCases = [
 
 // List<String> test_cases = [];
 
+String elementsToString(List<String> elements) {
+  String result = "";
+  for (String element in elements) {
+    result = '$result"$element",';
+  }
+  return result;
+}
+
 void main() async {
-  File logfile = File('search_engine_for_utaite_src/lib/test_cases.txt');
-  for (String testCase in testCases) {
+  File logfile = File(
+    'search_engine_for_utaite_src/lib/test_cases_source.dart',
+  );
+  await logfile.writeAsString(
+    'List<Map<String, dynamic>> searchCases = [',
+    mode: FileMode.write,
+  );
+  for (int i = 0; i < testCases.length; i++) {
+    String testCase = testCases[i];
     List<String> keywords = module1(testCase, "dzb");
     print(keywords);
     List<List<String>> keyword3form = await module2(keywords);
     await logfile.writeAsString(
-      '$testCase \n ${keywords.toString()} \n ${keyword3form.toString()} \n \n \n',
+      '{"number" : $i, "title" : "$testCase", "search_tag" : [[${elementsToString(keyword3form[0])}],[${elementsToString(keyword3form[1])}],[${elementsToString(keyword3form[2])}]], "keywords" : [${elementsToString(keywords)}]},',
       mode: FileMode.append,
     );
+    // for (String element in keywords) {
+    //   await logfile.writeAsString('', mode: FileMode.append);
+    // }
+
+    // await logfile.writeAsString(
+    //   '$testCase \n ${keywords.toString()} \n ${keyword3form.toString()} \n \n \n',
+    //   mode: FileMode.append,
+    // );
   }
+  await logfile.writeAsString('];', mode: FileMode.append);
 }
