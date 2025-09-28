@@ -9,6 +9,13 @@ List<String> keyword_to_split = [
   "／",
   "「",
   "」",
+  "|",
+  "’",
+  "‘",
+  ":",
+  '"',
+  "'",
+  '"',
 ];
 List<String> stopwords = [
   "cover",
@@ -32,7 +39,17 @@ List<String> stopwords = [
   "music",
   "video",
   ",", // 나중에 리스트 구분과 헷갈리지 않기 위해 꼭 필요하다.
+  "1", "2", "3", "4", "5", "6", "7", "8", "9", "0", // 더블 메타폰 변환을 위해 없어져야 한다.
 ];
+
+String removeEmojis(String source) {
+  // 이모지 제거용
+  String regexEmojis = "[\uD83C-\uDBFF\uDC00-\uDFFF]+";
+
+  // 이모지 제거
+  String result = source.replaceAll(RegExp(regexEmojis), "");
+  return result;
+}
 
 List<String> module1(String title, String channel) {
   /*
@@ -42,6 +59,8 @@ List<String> module1(String title, String channel) {
 
   title = title.toLowerCase();
   channel = channel.toLowerCase();
+  title = removeEmojis(title);
+  channel = removeEmojis(channel);
   // 불용어 제거
   for (String keyword in stopwords) {
     title = title.replaceAll(keyword, '');
@@ -68,18 +87,18 @@ List<String> module1(String title, String channel) {
     titleSplit = newTitleSplit;
   }
 
-  //띄어쓰기로 한 번 더 나누자
-  newChannelSplit = [];
-  for (String str in channelSplit) {
-    newChannelSplit.addAll(str.split(" "));
-  }
-  channelSplit.addAll(newChannelSplit);
+  // //띄어쓰기로 한 번 더 나누자
+  // newChannelSplit = [];
+  // for (String str in channelSplit) {
+  //   newChannelSplit.addAll(str.split(" "));
+  // }
+  // channelSplit.addAll(newChannelSplit);
 
-  newTitleSplit = [];
-  for (String str in titleSplit) {
-    newTitleSplit.addAll(str.split(" "));
-  }
-  titleSplit.addAll(newTitleSplit);
+  // newTitleSplit = [];
+  // for (String str in titleSplit) {
+  //   newTitleSplit.addAll(str.split(" "));
+  // }
+  // titleSplit.addAll(newTitleSplit);
 
   //그리고 splt때문에 비어있는 부분들 없애주자.
 
@@ -101,11 +120,16 @@ List<String> module1(String title, String channel) {
   return titleSplit + channelSplit;
 }
 
-// void main() {
-//   print(
-//     module1(
-//       "하나코 나나 - 길고 짧은 축제 (長く短い祭) Live Cover. [가사/해석]",
-//       "[이어폰 필수]자상무색(自傷無色) jishou mushoku 하나땅 KK 좌우",
-//     ),
-//   );
-// }
+final String apiUrl = 'https://api.openai.com/v1/chat/completions';
+
+List<String> splitSpace(List<String> input) {
+  List<String> newInputSplit = [];
+  for (String str in input) {
+    newInputSplit.addAll(str.split(" "));
+  }
+  input.addAll(newInputSplit);
+
+  input = input.toSet().toList();
+
+  return input;
+}

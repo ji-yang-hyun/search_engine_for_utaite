@@ -6,8 +6,20 @@ import 'package:http/http.dart' as http;
 
 final String apiUrl = 'https://api.openai.com/v1/chat/completions';
 
+List<String> splitSpace(List<String> input) {
+  List<String> newInputSplit = [];
+  for (String str in input) {
+    newInputSplit.addAll(str.split(" "));
+  }
+  input.addAll(newInputSplit);
+
+  input = input.toSet().toList();
+
+  return input;
+}
+
 String prompt =
-    "The given list elements are separated by commas.Convert the given list into Romanized form and Translated form. \n•	Romanized form means converting everything into Romanization, regardless of the original language.\n•	Translated form means converting everything into English, regardless of the original language.\n•	The lists will mainly contain Korean, English, and Japanese.\nExample input: [안녕, 吉乃, 길고 짧은 축제] \nExample output: [annyeong, yoshino, gilgo jjalbeun chugje],[hello, yoshino, long and short festival] \n When outputting, print only the two resulting lists in order. Do not use Markdown syntax, extra words, or commas for anything other than separating list elements or separating the two result lists.";
+    "The given list elements are separated by commas.Convert the given list into Romanized form and Translated form. \n•	Romanized form means converting everything into Romanization, regardless of the original language.\n•	Translated form means converting everything into English, regardless of the original language. \n When converting into the translated form, you don’t need to consider any relationships or contexts between the elements in the list. Just translate each element from given list into English on a one-to-one basis. \n•	The lists will mainly contain Korean, English, and Japanese. \n The result must never contain special characters. \nExample input: [안녕, 吉乃, 길고 짧은 축제] \nExample output: [annyeong, yoshino, gilgo jjalbeun chugje],[hello, yoshino, long and short festival] \n When outputting, print only the two resulting lists in order. Do not use Markdown syntax, extra words, or commas for anything other than separating list elements or separating the two result lists.";
 
 Future<String> generateResponse(List<String> inputList) async {
   /*
@@ -103,6 +115,12 @@ Future<List<List<String>>> responseFetch(
     }
   }
 
+  print(romanized);
+
+  //원래 공백이 없는 일본어를 위해 나중에 나눈다.
+  romanized = splitSpace(romanized);
+  translated = splitSpace(translated);
+
   doubleMetaphone = romanizedToDoubleMetaPhone(romanized);
 
   result = [romanized, translated, doubleMetaphone];
@@ -120,38 +138,31 @@ Future<List<List<String>>> module2(List<String> keywordSplit) async {
 
   return keyword3form;
 }
+/*
+지금 봤는데 내가 거르지 못 한 특수기호가 있는 경우에 더블 메타폰 변환을 못한다.
+이걸 프롬프트로 해결하기도 뭐하고 해서 그냥 모든 특수기호를 없애야할 것 같다.
+그리고 이모지도 안된다.
+그리고 더블 메타폰으로 변환할 때 숫자"만" 있으면 안된다, 근데 어차피 숫자는 걸러진다... 어차피 노래 제목에서 그리 중요하지 않을 가능성이 높으므로
+그냥 불용어 취급을 해버리자.
+*/
 
-// void main() {
-//   // generateResponse([
-//   //   "그래서 나는 음악을 그만두었다",
-//   //   "요루시카",
-//   //   "다즈비",
-//   //   "그래서",
-//   //   "나는",
-//   //   "음악을",
-//   //   "그만두었다",
-//   //   "dzb",
-//   // ]).then((value) {
-//   //   print(value);
-//   // });
-//   // print(
-//   //   responseFetch(
-//   //     "[geuraeseo naneun eumageul geumandueotda, yorushika, dazubi, geuraeseo, naneun, eumageul, geumandueotda, dzb],[so i quit music, yorushika, dazubi, so, i, music, quit, dzb],[KRSNNNEMKLKMNTT, KRSNNNEMKLKMNTT, YRXK, YRSK, TSP, TSP, KRSNNN, KRSNNN, NN, NN, AMKL, AMKL, KMNTT, KMNTT, TSP, TSP]",
-//   //     8,
-//   //   ),
-//   // );
+/*
+요소를 영어로 번역하고 그걸 배경으로 또 이상하게 module 1 처럼 쪼개서 계속 wrong response가 났었다.
+그래서 프롬프트 수정함
+*/
 
-//   module2([
-//     "그래서 나는 음악을 그만두었다",
-//     "요루시카",
-//     "다즈비",
-//     "그래서",
-//     "나는",
-//     "음악을",
-//     "그만두었다",
-//     "dzb",
-//   ]).then((value) {});
-// }
+/*
+프롬프트가 이상한지 지피티 얘가 계속 뭐 이상한 특수기호를 넣네 이걸 변환하면서
+그리고 띄어쓰기 module 1에서 잘 못거른다
+
+그리고 무엇보다 일본어는 띄어쓰기 없이 문장에서 단어가 많이 구분되니까...
+원본 키워드에서 로마자로 바꾼거랑 번역한거에서 또 띄어쓰기를 포함한게 있으면 그걸 기준으로 나눠줘야겠다.
+그리고 그 과정은 간단히 또 module1에 넣는걸로 하자 ㅋㅋ -> 그냥 모듈1에서 띄어쓰기 구분을 없애고 나중에 나누는걸로 바꿨다. 오히려 더 나을수도?
+일단 gpt부담은 줄었음 ㅇㅇ
+*/
+
+
+
 
 
 /*
