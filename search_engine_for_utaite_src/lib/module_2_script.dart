@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:dart_phonetics/dart_phonetics.dart';
 import 'package:dotenv/dotenv.dart' as dotenv;
 import 'package:http/http.dart' as http;
+import 'package:korean_romanization_converter/korean_romanization_converter.dart';
 
 final String apiUrl = 'https://api.openai.com/v1/chat/completions';
 
@@ -19,7 +20,7 @@ List<String> splitSpace(List<String> input) {
 }
 
 String prompt =
-    "The given list elements are separated by commas.Convert the given list into Romanized form and Translated form. \n•	Romanized form means converting everything into Romanization, regardless of the original language.\n•	Translated form means converting everything into English, regardless of the original language. \n When converting into the translated form, you don’t need to consider any relationships or contexts between the elements in the list. Just translate each element from given list into English on a one-to-one basis. \n When converting into Romanized form, do not establish any correlation between the elements of the list. You must not consider any relationships or contexts between the elements in the list. \n When you convert korean to romanized, Convert each element individually and strictly follow the official Romanization rules of the korean. Every element must be Romanized consistently and accurately according to the standardized rules, with no exceptions. \n •	The lists will mainly contain Korean, English, and Japanese. \n The result must never contain special characters. \nExample input: [안녕, 吉乃, 길고 짧은 축제] \nExample output: [annyeong, yoshino, gilgo jjalbeun chugje],[hello, yoshino, long and short festival] \n When outputting, print only the two resulting lists in order. Do not use Markdown syntax, extra words, or commas for anything other than separating list elements or separating the two result lists.";
+    "The given list elements are separated by commas.Convert the given list into Romanized form and Translated form. \n•	Romanized form means converting japanese into Romanization.\n When converting to Romanized form, Korean must always be kept as is, and only Japanese should be converted into Romanized form. Therefore, the resulting lists must contain only Korean and English. \n	Translated form means converting everything into English, regardless of the original language. \n When converting into the translated form, you don’t need to consider any relationships or contexts between the elements in the list. Just translate each element from given list into English on a one-to-one basis. \n •	The lists will mainly contain Korean, English, and Japanese. \n The result must never contain special characters. \nExample input: [안녕, 吉乃좋아, happy吉乃] \nExample output: [안녕, yoshino좋아, happy yoshino],[hello, yoshino, happy yoshino] \n When outputting, print only the two resulting lists in order. Do not use Markdown syntax, extra words, or commas for anything other than separating list elements or separating the two result lists.";
 
 Future<String> generateResponse(List<String> inputList) async {
   /*
@@ -77,6 +78,24 @@ List<String> romanizedToDoubleMetaPhone(List<String> romanizedList) {
   return result;
 }
 
+String removeJP(String source) {
+  // 이모지 제거용
+  String regexJP = r"([ぁ-んァ-ン一-龯])";
+
+  // 이모지 제거
+  String result = source.replaceAll(RegExp(regexJP), "");
+  return result;
+}
+
+String removeKR(String source) {
+  // 이모지 제거용
+  String regexKR = r"([ㄱ-ㅎ|ㅏ-ㅣ|가-힣])";
+
+  // 이모지 제거
+  String result = source.replaceAll(RegExp(regexKR), "");
+  return result;
+}
+
 Future<List<List<String>>> responseFetch(
   String response,
   int keywordCount,
@@ -99,7 +118,8 @@ Future<List<List<String>>> responseFetch(
   response = response.replaceAll("\n", "");
   responseSplit = response.split(',');
 
-  if (keywordCount * 2 == responseSplit.length) {
+  if (keywordCount * 2 == responseSplit.length &&
+      (removeJP(responseSplit.toString()) == responseSplit.toString())) {
     print("good");
   } else {
     print("wrong response try again");
@@ -113,6 +133,14 @@ Future<List<List<String>>> responseFetch(
     } else {
       translated.add(responseSplit[i].trim());
     }
+  }
+
+  print(romanized);
+
+  final converter = KoreanRomanizationConverter();
+  for (int i = 0; i < romanized.length; i++) {
+    String str = romanized[i];
+    romanized[i] = converter.romanize(str);
   }
 
   print(romanized);
@@ -138,6 +166,8 @@ Future<List<List<String>>> module2(List<String> keywordSplit) async {
 
   return keyword3form;
 }
+
+void main() {}
 /*
 지금 봤는데 내가 거르지 못 한 특수기호가 있는 경우에 더블 메타폰 변환을 못한다.
 이걸 프롬프트로 해결하기도 뭐하고 해서 그냥 모든 특수기호를 없애야할 것 같다.
@@ -167,6 +197,24 @@ Future<List<List<String>>> module2(List<String> keywordSplit) async {
 리제 -> rije가 맞는데
 리스트에 lize있다고 그걸 그대로 쓰거나 막 그래서 프롬프트 수정했다.
 골치아파서 그냥 한국어는 어차피 로마자 변환 규칙이 명확하니까 그냥 라이브러리 돌릴까도 했지만, 그냥 뒀다.
+*/
+
+/*
+tlqkf
+일단은 문제가 "리제"같은 단어를 원래 로마자 규칙대로라면 rije라고 해야하고 실제로 라이브러리에서는 그렇게 한다.
+그런데 gpt가 빡통이라 이걸 옆에있는거 가져와서 lize라고 해버린다.
+이걸 뭐 잡기도 뭐하고 그래서 그냥 한국어는 ai 안쓰고 그냥 라이브러리로 로마자로 바꾸려고 한다.
+그 과정에서 프롬프트를 수정하여 한국어는 남기도록 했는데 그게 안되는 경우들이 있어서 고치는중이다
+ai이 빡통색기
+
+결국은 이렇게 됐네 ㅋㅋㅋ 그래도 성능은 더 나을 것 같다.
+
+지금도 아직 한국어를 영어로 바꿔버리는 만행을 저지르긴 하는데
+그것도 꼭 잡아야되나...?
+ai 쓰는건데 이정도는 그냥 넘어갈까
+잡자 그냥...
+
+이제 한국어가 영어로 바뀌는 거 잡아야함.
 */
 
 

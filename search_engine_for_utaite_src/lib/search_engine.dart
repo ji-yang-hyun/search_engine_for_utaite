@@ -148,7 +148,7 @@ List<String> splitSpace(List<String> input) {
 }
 
 String prompt =
-    "The given list elements are separated by commas.Convert the given list into Romanized form and Translated form. \n•	Romanized form means converting everything into Romanization, regardless of the original language.\n•	Translated form means converting everything into English, regardless of the original language. \n When converting into the translated form, you don’t need to consider any relationships or contexts between the elements in the list. Just translate each element from given list into English on a one-to-one basis. \n When converting into Romanized form, do not establish any correlation between the elements of the list. You must not consider any relationships or contexts between the elements in the list. \n When you convert korean to romanized, Convert each element individually and strictly follow the official Romanization rules of the korean. Every element must be Romanized consistently and accurately according to the standardized rules, with no exceptions. \n •	The lists will mainly contain Korean, English, and Japanese. \n The result must never contain special characters. \nExample input: [안녕, 吉乃, 길고 짧은 축제] \nExample output: [annyeong, yoshino, gilgo jjalbeun chugje],[hello, yoshino, long and short festival] \n When outputting, print only the two resulting lists in order. Do not use Markdown syntax, extra words, or commas for anything other than separating list elements or separating the two result lists.";
+    "The given list elements are separated by commas.Convert the given list into Romanized form and Translated form. \n•	Romanized form means converting japanese into Romanization.\n When converting to Romanized form, Korean must always be kept as is, and only Japanese should be converted into Romanized form. Therefore, the resulting lists must contain only Korean and English. \n	Translated form means converting everything into English, regardless of the original language. \n When converting into the translated form, you don’t need to consider any relationships or contexts between the elements in the list. Just translate each element from given list into English on a one-to-one basis. \n •	The lists will mainly contain Korean, English, and Japanese. \n The result must never contain special characters. \nExample input: [안녕, 吉乃좋아, happy吉乃] \nExample output: [안녕, yoshino좋아, happy yoshino],[hello, yoshino, happy yoshino] \n When outputting, print only the two resulting lists in order. Do not use Markdown syntax, extra words, or commas for anything other than separating list elements or separating the two result lists.";
 
 Future<String> generateResponse(List<String> inputList) async {
   /*
@@ -206,6 +206,15 @@ List<String> romanizedToDoubleMetaPhone(List<String> romanizedList) {
   return result;
 }
 
+String removeJP(String source) {
+  // 이모지 제거용
+  String regexJP = r"([ぁ-んァ-ン一-龯])";
+
+  // 이모지 제거
+  String result = source.replaceAll(RegExp(regexJP), "");
+  return result;
+}
+
 Future<List<List<String>>> responseFetch(
   String response,
   int keywordCount,
@@ -228,7 +237,8 @@ Future<List<List<String>>> responseFetch(
   response = response.replaceAll("\n", "");
   responseSplit = response.split(',');
 
-  if (keywordCount * 2 == responseSplit.length) {
+  if (keywordCount * 2 == responseSplit.length &&
+      (removeJP(responseSplit.toString()) == responseSplit.toString())) {
     print("good");
   } else {
     print("wrong response try again");
@@ -242,6 +252,14 @@ Future<List<List<String>>> responseFetch(
     } else {
       translated.add(responseSplit[i].trim());
     }
+  }
+
+  print(romanized);
+
+  final converter = KoreanRomanizationConverter();
+  for (int i = 0; i < romanized.length; i++) {
+    String str = romanized[i];
+    romanized[i] = converter.romanize(str);
   }
 
   print(romanized);

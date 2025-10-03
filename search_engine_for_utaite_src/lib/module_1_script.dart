@@ -16,6 +16,7 @@ List<String> keyword_to_split = [
   '"',
   "'",
   '"',
+  "ㅣ",
 ];
 List<String> stopwords = [
   "cover",
@@ -38,6 +39,8 @@ List<String> stopwords = [
   "official",
   "music",
   "video",
+  "】",
+  "【",
   ",", // 나중에 리스트 구분과 헷갈리지 않기 위해 꼭 필요하다.
   "1", "2", "3", "4", "5", "6", "7", "8", "9", "0", // 더블 메타폰 변환을 위해 없어져야 한다.
 ];
