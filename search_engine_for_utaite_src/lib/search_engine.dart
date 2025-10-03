@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math';
 // import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:dart_phonetics/dart_phonetics.dart';
 import 'package:dotenv/dotenv.dart' as dotenv;
@@ -7,6 +8,7 @@ import 'package:http/http.dart' as http;
 import 'package:korean_romanization_converter/korean_romanization_converter.dart';
 import 'package:plagiarism_checker_plus/plagiarism_checker_plus.dart';
 import 'package:search_engine_for_utaite_src/test_cases.dart';
+import 'package:search_engine_for_utaite_src/test_cases_source.dart';
 import 'package:translator/translator.dart';
 
 List<String> keyword_to_split = [
@@ -302,22 +304,55 @@ double comparisonString(String input, String target) {
   List<String> inputCList = input.split("");
   List<String> targetCList = target.split("");
 
-  int s = 0;
-  int cnt = 0;
-  for (int i = 0; i < inputCList.length; i++) {
-    for (int j = s; j < targetCList.length; j++) {
-      if (inputCList[i] == targetCList[j]) {
-        s = j + 1;
-        cnt += 1;
-        break;
-      }
-    }
-  }
+  int cnt = levenshteinDistance(target, input);
 
   //더블 메타폰 형태의 유사도 점수.
   double point = cnt / Max(inputCList.length + 0.0, targetCList.length + 0.0);
 
   return point;
+}
+
+int levenshteinDistance(String a, String b) {
+  /*
+  a 가 목표 문자열
+  b 가 원래 문자열
+  */
+  int result = 0;
+  int an = a.length;
+  int bn = b.length;
+  List<String> al = [" "] + a.split('');
+  List<String> bl = [" "] + b.split('');
+
+  List<List<int>> matrix = [];
+  for (int i = 0; i <= bn; i++) {
+    List<int> l = [i];
+    for (int j = 1; j <= an; j++) {
+      l.add(j);
+    }
+    matrix.add(l);
+  }
+
+  for (int i = 0; i < bl.length; i++) {
+    for (int j = 0; j < al.length; j++) {
+      if (i * j == 0) {
+        continue;
+      }
+      int insertions = matrix[i][j - 1] + 1;
+      int deletions = matrix[i - 1][j] + 1;
+      int substitutions = matrix[i - 1][j - 1] + 1;
+      matrix[i][j] = min(insertions, min(deletions, substitutions));
+      if (al[j] == bl[i]) {
+        matrix[i][j] = matrix[i - 1][j - 1];
+      }
+    }
+  }
+
+  // print(al);
+  // print(bl);
+  // print(matrix);
+
+  result = matrix[bl.length - 1][al.length - 1];
+  return result;
 }
 
 double comparisonDMP(List<String> inputDMPList, List<String> targetDMPList) {
