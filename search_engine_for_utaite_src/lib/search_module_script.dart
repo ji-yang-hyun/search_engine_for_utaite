@@ -46,7 +46,9 @@ double comparisonString(String input, String target) {
   int cnt = levenshteinDistance(target, input);
 
   //더블 메타폰 형태의 유사도 점수.
-  double point = cnt / Max(inputCList.length + 0.0, targetCList.length + 0.0);
+  double point =
+      (Max(inputCList.length + 0.0, targetCList.length + 0.0) - cnt) /
+      Max(inputCList.length + 0.0, targetCList.length + 0.0);
 
   return point;
 }
