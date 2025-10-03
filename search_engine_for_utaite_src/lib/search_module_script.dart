@@ -40,15 +40,10 @@ double comparisonString(String input, String target) {
   //순서가 중요하다.
   // 앞쪽부터 쭉 따라가면서 순서에 맞는 알파벳이 순서에 있는게 몇 개가 있는지 체크하자.
 
-  List<String> inputCList = input.split("");
-  List<String> targetCList = target.split("");
-
   int cnt = levenshteinDistance(target, input);
 
   //더블 메타폰 형태의 유사도 점수.
-  double point =
-      (Max(inputCList.length + 0.0, targetCList.length + 0.0) - cnt) /
-      Max(inputCList.length + 0.0, targetCList.length + 0.0);
+  double point = (input.length - cnt) / input.length;
 
   return point;
 }

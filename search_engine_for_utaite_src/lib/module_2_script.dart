@@ -19,7 +19,7 @@ List<String> splitSpace(List<String> input) {
 }
 
 String prompt =
-    "The given list elements are separated by commas.Convert the given list into Romanized form and Translated form. \n•	Romanized form means converting everything into Romanization, regardless of the original language.\n•	Translated form means converting everything into English, regardless of the original language. \n When converting into the translated form, you don’t need to consider any relationships or contexts between the elements in the list. Just translate each element from given list into English on a one-to-one basis. \n When converting into Romanized form, do not establish any correlation between the elements of the list. Convert each element individually based on the Romanization rules.\n•	The lists will mainly contain Korean, English, and Japanese. \n The result must never contain special characters. \nExample input: [안녕, 吉乃, 길고 짧은 축제] \nExample output: [annyeong, yoshino, gilgo jjalbeun chugje],[hello, yoshino, long and short festival] \n When outputting, print only the two resulting lists in order. Do not use Markdown syntax, extra words, or commas for anything other than separating list elements or separating the two result lists.";
+    "The given list elements are separated by commas.Convert the given list into Romanized form and Translated form. \n•	Romanized form means converting everything into Romanization, regardless of the original language.\n•	Translated form means converting everything into English, regardless of the original language. \n When converting into the translated form, you don’t need to consider any relationships or contexts between the elements in the list. Just translate each element from given list into English on a one-to-one basis. \n When converting into Romanized form, do not establish any correlation between the elements of the list. You must not consider any relationships or contexts between the elements in the list. \n When you convert korean to romanized, Convert each element individually and strictly follow the official Romanization rules of the korean. Every element must be Romanized consistently and accurately according to the standardized rules, with no exceptions. \n •	The lists will mainly contain Korean, English, and Japanese. \n The result must never contain special characters. \nExample input: [안녕, 吉乃, 길고 짧은 축제] \nExample output: [annyeong, yoshino, gilgo jjalbeun chugje],[hello, yoshino, long and short festival] \n When outputting, print only the two resulting lists in order. Do not use Markdown syntax, extra words, or commas for anything other than separating list elements or separating the two result lists.";
 
 Future<String> generateResponse(List<String> inputList) async {
   /*
@@ -166,6 +166,7 @@ Future<List<List<String>>> module2(List<String> keywordSplit) async {
 예를 들어 
 리제 -> rije가 맞는데
 리스트에 lize있다고 그걸 그대로 쓰거나 막 그래서 프롬프트 수정했다.
+골치아파서 그냥 한국어는 어차피 로마자 변환 규칙이 명확하니까 그냥 라이브러리 돌릴까도 했지만, 그냥 뒀다.
 */
 
 
