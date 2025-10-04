@@ -20,7 +20,7 @@ List<String> splitSpace(List<String> input) {
 }
 
 String prompt =
-    "The given list elements are separated by commas.Convert the given list into Romanized form and Translated form. \n•	Romanized form means converting japanese into Romanization.\n When converting to Romanized form, Korean must always be kept as is, and only Japanese should be converted into Romanized form. Therefore, the resulting lists must contain only Korean and English. \n	Translated form means converting everything into English, regardless of the original language. \n When converting into the translated form, you don’t need to consider any relationships or contexts between the elements in the list. Just translate each element from given list into English on a one-to-one basis. \n •	The lists will mainly contain Korean, English, and Japanese. \n The result must never contain special characters. \nExample input: [안녕, 吉乃좋아, happy吉乃] \nExample output: [안녕, yoshino좋아, happy yoshino],[hello, yoshino, happy yoshino] \n When outputting, print only the two resulting lists in order. Do not use Markdown syntax, extra words, or commas for anything other than separating list elements or separating the two result lists.";
+    "Forget all the previous inputs, outputs, and prompts.\n The given list elements are separated by commas.Convert the given list into Romanized form and Translated form. \n•	Romanized form means converting Japanese characters into Romanization.\n When converting to Romanized form, Korean characters must always be kept as is, and only Japanese characters should be converted into Romanized form. Here, Korean characters and Japanese characters do not refer to the Korean or Japanese languages themselves, but only to the characters as writing systems. \n Therefore, the resulting lists must contain only Korean characters and English letters. \nTranslated form means converting everything into English, regardless of the original language. \n When converting into the translated form, you don’t need to consider any relationships or contexts between the elements in the list. Just translate each element from given list into English on a one-to-one basis. \n •	The given lists will mainly contain Korean characters, English letters, and Japanese characters. \n The result must never contain special characters. \n When outputting, print only the two resulting lists in order. Do not use Markdown syntax, extra words, or commas for anything other than separating list elements or separating the two result lists.\nExample input: [안녕 나는 요시노 노래들어, 吉乃좋아, happy吉乃] \nExample output: [안녕 나는 요시노 노래들어, yoshino좋아, happy yoshino],[Hello, I listen to Yoshino's songs, yoshino I like it, happy yoshino]";
 
 Future<String> generateResponse(List<String> inputList) async {
   /*
@@ -48,6 +48,7 @@ Future<String> generateResponse(List<String> inputList) async {
         {'role': 'system', 'content': prompt},
         {'role': 'user', 'content': inputList.toString()},
       ],
+      "temperature": 0.3,
       'max_tokens': 10000,
     }),
   );
@@ -80,19 +81,20 @@ List<String> romanizedToDoubleMetaPhone(List<String> romanizedList) {
 
 String removeJP(String source) {
   // 이모지 제거용
-  String regexJP = r"([ぁ-んァ-ン一-龯])";
+  String regexJP = r"([ぁ-んァ-ンー一-龯])";
 
   // 이모지 제거
   String result = source.replaceAll(RegExp(regexJP), "");
+
   return result;
 }
 
-String removeKR(String source) {
+String removeEN(String source) {
   // 이모지 제거용
-  String regexKR = r"([ㄱ-ㅎ|ㅏ-ㅣ|가-힣])";
+  String regexEN = r"[a-zA-Z]";
 
   // 이모지 제거
-  String result = source.replaceAll(RegExp(regexKR), "");
+  String result = source.replaceAll(RegExp(regexEN), "");
   return result;
 }
 
@@ -121,6 +123,30 @@ Future<List<List<String>>> responseFetch(
   if (keywordCount * 2 == responseSplit.length &&
       (removeJP(responseSplit.toString()) == responseSplit.toString())) {
     print("good");
+    print(
+      removeEN(
+        removeJP(
+          responseSplit
+              .toString()
+              .replaceAll(" ", "")
+              .replaceAll(",", "")
+              .replaceAll("[", "")
+              .replaceAll("]", ""),
+        ),
+      ),
+    );
+    print(
+      removeEN(
+        removeJP(
+          keywords
+              .toString()
+              .replaceAll(" ", "")
+              .replaceAll(",", "")
+              .replaceAll("[", "")
+              .replaceAll("]", ""),
+        ),
+      ),
+    );
   } else {
     print("wrong response try again");
     var value = await module2(keywords);
@@ -144,6 +170,7 @@ Future<List<List<String>>> responseFetch(
   }
 
   print(romanized);
+  print("\n\n");
 
   //원래 공백이 없는 일본어를 위해 나중에 나눈다.
   romanized = splitSpace(romanized);
@@ -166,56 +193,6 @@ Future<List<List<String>>> module2(List<String> keywordSplit) async {
 
   return keyword3form;
 }
-
-void main() {}
-/*
-지금 봤는데 내가 거르지 못 한 특수기호가 있는 경우에 더블 메타폰 변환을 못한다.
-이걸 프롬프트로 해결하기도 뭐하고 해서 그냥 모든 특수기호를 없애야할 것 같다.
-그리고 이모지도 안된다.
-그리고 더블 메타폰으로 변환할 때 숫자"만" 있으면 안된다, 근데 어차피 숫자는 걸러진다... 어차피 노래 제목에서 그리 중요하지 않을 가능성이 높으므로
-그냥 불용어 취급을 해버리자.
-*/
-
-/*
-요소를 영어로 번역하고 그걸 배경으로 또 이상하게 module 1 처럼 쪼개서 계속 wrong response가 났었다.
-그래서 프롬프트 수정함
-*/
-
-/*
-프롬프트가 이상한지 지피티 얘가 계속 뭐 이상한 특수기호를 넣네 이걸 변환하면서
-그리고 띄어쓰기 module 1에서 잘 못거른다
-
-그리고 무엇보다 일본어는 띄어쓰기 없이 문장에서 단어가 많이 구분되니까...
-원본 키워드에서 로마자로 바꾼거랑 번역한거에서 또 띄어쓰기를 포함한게 있으면 그걸 기준으로 나눠줘야겠다.
-그리고 그 과정은 간단히 또 module1에 넣는걸로 하자 ㅋㅋ -> 그냥 모듈1에서 띄어쓰기 구분을 없애고 나중에 나누는걸로 바꿨다. 오히려 더 나을수도?
-일단 gpt부담은 줄었음 ㅇㅇ
-*/
-
-/*
-한국어 로마자로 바꿀때 계속 그 리스트에 있는 영어로 쓰는 것 같아서
-예를 들어 
-리제 -> rije가 맞는데
-리스트에 lize있다고 그걸 그대로 쓰거나 막 그래서 프롬프트 수정했다.
-골치아파서 그냥 한국어는 어차피 로마자 변환 규칙이 명확하니까 그냥 라이브러리 돌릴까도 했지만, 그냥 뒀다.
-*/
-
-/*
-tlqkf
-일단은 문제가 "리제"같은 단어를 원래 로마자 규칙대로라면 rije라고 해야하고 실제로 라이브러리에서는 그렇게 한다.
-그런데 gpt가 빡통이라 이걸 옆에있는거 가져와서 lize라고 해버린다.
-이걸 뭐 잡기도 뭐하고 그래서 그냥 한국어는 ai 안쓰고 그냥 라이브러리로 로마자로 바꾸려고 한다.
-그 과정에서 프롬프트를 수정하여 한국어는 남기도록 했는데 그게 안되는 경우들이 있어서 고치는중이다
-ai이 빡통색기
-
-결국은 이렇게 됐네 ㅋㅋㅋ 그래도 성능은 더 나을 것 같다.
-
-지금도 아직 한국어를 영어로 바꿔버리는 만행을 저지르긴 하는데
-그것도 꼭 잡아야되나...?
-ai 쓰는건데 이정도는 그냥 넘어갈까
-잡자 그냥...
-
-이제 한국어가 영어로 바뀌는 거 잡아야함.
-*/
 
 
 
@@ -244,6 +221,68 @@ ai는 어쩔 수 없이 답변이 매 번 다를 수 밖에 없으니까 에러�
 LLM이 설마 번역을 못해줄까
 근데 굳이? 저번에 썼듯이 한국어로 번역된걸 일본어 병음으로 검색하는것만 아니면 거의 모든 케이스가 가능해서
 아 근데 영어로 번역된 제목... 아냐 근데 그것도 극소수니까 일단은 이렇게 놓자.
+*/
+
+
+/*
+요소를 영어로 번역하고 그걸 배경으로 또 이상하게 module 1 처럼 쪼개서 계속 wrong response가 났었다.
+그래서 프롬프트 수정함
+*/
+
+/*
+프롬프트가 이상한지 지피티 얘가 계속 뭐 이상한 특수기호를 넣네 이걸 변환하면서
+그리고 띄어쓰기 module 1에서 잘 못거른다
+
+그리고 무엇보다 일본어는 띄어쓰기 없이 문장에서 단어가 많이 구분되니까...
+원본 키워드에서 로마자로 바꾼거랑 번역한거에서 또 띄어쓰기를 포함한게 있으면 그걸 기준으로 나눠줘야겠다.
+그리고 그 과정은 간단히 또 module1에 넣는걸로 하자 ㅋㅋ -> 그냥 모듈1에서 띄어쓰기 구분을 없애고 나중에 나누는걸로 바꿨다. 오히려 더 나을수도?
+일단 gpt부담은 줄었음 ㅇㅇ
+*/
+
+/*
+지금 봤는데 내가 거르지 못 한 특수기호가 있는 경우에 더블 메타폰 변환을 못한다.
+이걸 프롬프트로 해결하기도 뭐하고 해서 그냥 모든 특수기호를 없애야할 것 같다.
+그리고 이모지도 안된다.
+그리고 더블 메타폰으로 변환할 때 숫자"만" 있으면 안된다, 근데 어차피 숫자는 걸러진다... 어차피 노래 제목에서 그리 중요하지 않을 가능성이 높으므로
+그냥 불용어 취급을 해버리자.
+*/
+
+
+/*
+한국어 로마자로 바꿀때 계속 그 리스트에 있는 영어로 쓰는 것 같아서
+예를 들어 
+리제 -> rije가 맞는데
+리스트에 lize있다고 그걸 그대로 쓰거나 막 그래서 프롬프트 수정했다.
+골치아파서 그냥 한국어는 어차피 로마자 변환 규칙이 명확하니까 그냥 라이브러리 돌릴까도 했지만, 그냥 뒀다.
+*/
+
+/*
+tlqkf
+일단은 문제가 "리제"같은 단어를 원래 로마자 규칙대로라면 rije라고 해야하고 실제로 라이브러리에서는 그렇게 한다.
+그런데 gpt가 빡통이라 이걸 옆에있는거 가져와서 lize라고 해버린다.
+이걸 뭐 잡기도 뭐하고 그래서 그냥 한국어는 ai 안쓰고 그냥 라이브러리로 로마자로 바꾸려고 한다.
+그 과정에서 프롬프트를 수정하여 한국어는 남기도록 했는데 그게 안되는 경우들이 있어서 고치는중이다
+ai이 빡통색기
+
+결국은 이렇게 됐네 ㅋㅋㅋ 그래도 성능은 더 나을 것 같다.
+
+지금도 아직 한국어를 영어로 바꿔버리는 만행을 저지르긴 하는데
+그것도 꼭 잡아야되나...?
+ai 쓰는건데 이정도는 그냥 넘어갈까
+잡자 그냥...
+
+이제 한국어가 영어로 바뀌는 거 잡아야함.
+결국에는 ai를 사용한다는건 확률싸움이기 때문에 여러가지 안전장치들을 적용하는것이다.
+*/
+
+/*
+아니 시발 이 미친 ai색기 그냥 한국어랑 일본어 구분해서 하는게 뭐 그리 어려운지 계속 못한다.
+내가 프롬프트를 못 짜서 그런걸수도 있는데 나는 뭐 프롬프트 짜는 사람은 아니니까...
+이걸 어떻게 해야하는가...
+내 생각에는 ai가 판단을 그냥 못 하는 것 같다.
+어휴 진짜... temp값도 낮추고 이것저것 해봤는데 얘가 계속 구분을 못 한다...
+방법은 두 가지다. 정규식을 잘 써서 일본어 부분이나 한국어 부분을 따로 뺀 상태로 ai에 집어넣거나
+아니면 그냥 더 좋은 gpt를 쓰거나.
 */
 
 /*

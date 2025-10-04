@@ -1,5 +1,4 @@
 import 'package:search_engine_for_utaite_src/module_1_script.dart';
-// import 'package:search_engine_for_utaite_src/module_2_script.dart';
 import 'dart:io';
 
 import 'package:search_engine_for_utaite_src/module_2_script.dart';
