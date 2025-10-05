@@ -46,6 +46,48 @@ List<String> stopwords = [
   "1", "2", "3", "4", "5", "6", "7", "8", "9", "0", // 더블 메타폰 변환을 위해 없어져야 한다.
 ];
 
+List<String> smallAlphabetTable = [
+  "ᴀ",
+  "ʙ",
+  "ᴄ",
+  "ᴅ",
+  "ᴇ",
+  "ғ",
+  "ɢ",
+  "ʜ",
+  "ɪ",
+  "ᴊ",
+  "ᴋ",
+  "ʟ",
+  "ᴍ",
+  "ɴ",
+  "ᴏ",
+  "ᴘ",
+  "ǫ",
+  "ʀ",
+  "s",
+  "ᴛ",
+  "ᴜ",
+  "ᴠ",
+  "ᴡ",
+  "x",
+  "ʏ",
+  "ᴢ",
+];
+
+String smallAlphabetFetch(String source) {
+  List<String> sourceList = source.split("");
+  String result = "";
+  for (int i = 0; i < sourceList.length; i++) {
+    String str = sourceList[0];
+    if (smallAlphabetTable.contains(str)) {
+      sourceList[i] = String.fromCharCode(97 + smallAlphabetTable.indexOf(str));
+    }
+    result += sourceList[i];
+  }
+  return result;
+}
+
 String removeEmojis(String source) {
   // 이모지 제거용
   String regexEmojis = "[\uD83C-\uDBFF\uDC00-\uDFFF]+";
@@ -78,6 +120,9 @@ List<String> module1(String title, String channel) {
   우타이테 전용 인덱싱
   제목과 채널이름을 매개변수로 받아 키워드 리스트를 return 한다.
   */
+
+  title = smallAlphabetFetch(title);
+  channel = smallAlphabetFetch(channel);
 
   title = title.toLowerCase();
   channel = channel.toLowerCase();
