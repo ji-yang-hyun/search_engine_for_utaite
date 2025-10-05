@@ -8,16 +8,28 @@ import 'package:search_engine_for_utaite_src/module_1_script.dart';
 
 final String apiUrl = 'https://api.openai.com/v1/responses';
 
-List<String> splitSpace(List<String> input) {
+List<String> splitBySpace(List<String> input) {
   List<String> newInputSplit = [];
   for (String str in input) {
-    newInputSplit.addAll(str.split(" "));
+    newInputSplit.addAll(splitSpace(str));
   }
   input.addAll(newInputSplit);
 
   input = input.toSet().toList();
 
   return input;
+}
+
+List<String> splitSpace(String source) {
+  List<String> result = [];
+  List<String> sourceSplit = source.split(" ");
+  for (String str in sourceSplit) {
+    result.add(str);
+    source = source.replaceAll("$str ", "");
+    result.add(source);
+  }
+
+  return result;
 }
 
 String promptRomanize =
@@ -179,8 +191,8 @@ Future<List<List<String>>> module2(List<String> keywords) async {
     print("done");
   }
 
-  romanized = splitSpace(romanized);
-  translated = splitSpace(translated);
+  romanized = splitBySpace(romanized);
+  translated = splitBySpace(translated);
 
   List<String> doubleMetaphone = romanizedToDoubleMetaPhone(romanized);
 
@@ -189,9 +201,9 @@ Future<List<List<String>>> module2(List<String> keywords) async {
   return [romanized, translated, doubleMetaphone];
 }
 
-void main() {
-  print(removeKR("안녕하세요 i'm james"));
-}
+// void main() {
+//   ;
+// }
 
 /*
 우려했던 ai사용의 문제점이 나타났다.
