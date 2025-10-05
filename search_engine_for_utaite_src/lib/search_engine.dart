@@ -170,6 +170,13 @@ List<String> module1(String title, String channel) {
     channelSplit[i] = channelSplit[i].trim();
   }
 
+  for (int i = 0; i < channelSplit.length; i++) {
+    channelSplit[i] = fetch(channelSplit[i]);
+  }
+  for (int i = 0; i < titleSplit.length; i++) {
+    titleSplit[i] = fetch(titleSplit[i]);
+  }
+
   channelSplit = channelSplit.toSet().toList();
   titleSplit = titleSplit.toSet().toList();
 
@@ -177,13 +184,6 @@ List<String> module1(String title, String channel) {
   titleSplit.remove("");
   channelSplit.remove(" ");
   titleSplit.remove(" ");
-
-  for (int i = 0; i < channelSplit.length; i++) {
-    channelSplit[i] = fetch(channelSplit[i]);
-  }
-  for (int i = 0; i < titleSplit.length; i++) {
-    titleSplit[i] = fetch(titleSplit[i]);
-  }
 
   return titleSplit + channelSplit;
 }

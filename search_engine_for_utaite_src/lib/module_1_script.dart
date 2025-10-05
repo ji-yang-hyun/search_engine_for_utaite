@@ -162,11 +162,6 @@ List<String> module1(String title, String channel) {
   channelSplit = channelSplit.toSet().toList();
   titleSplit = titleSplit.toSet().toList();
 
-  channelSplit.remove("");
-  titleSplit.remove("");
-  channelSplit.remove(" ");
-  titleSplit.remove(" ");
-
   for (int i = 0; i < channelSplit.length; i++) {
     channelSplit[i] = fetch(channelSplit[i]);
   }
@@ -174,5 +169,22 @@ List<String> module1(String title, String channel) {
     titleSplit[i] = fetch(titleSplit[i]);
   }
 
+  channelSplit = channelSplit.toSet().toList();
+  titleSplit = titleSplit.toSet().toList();
+
+  channelSplit.remove("");
+  titleSplit.remove("");
+  channelSplit.remove(" ");
+  titleSplit.remove(" ");
+
   return titleSplit + channelSplit;
+}
+
+void main() {
+  print(
+    module1(
+      "シャンティ(SHANTI) [wotaku]ㅣ아카네 리제(Akane Lize) 【COVER】",
+      "아카네 리제 AKANE LIZE",
+    ),
+  );
 }
