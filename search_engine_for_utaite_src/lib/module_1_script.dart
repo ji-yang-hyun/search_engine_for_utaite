@@ -1,3 +1,5 @@
+import 'package:search_engine_for_utaite_src/test_cases.dart';
+
 List<String> keyword_to_split = [
   "/",
   "-",
@@ -39,8 +41,7 @@ List<String> stopwords = [
   "official",
   "music",
   "video",
-  "】",
-  "【",
+  "불렀습니다",
   ",", // 나중에 리스트 구분과 헷갈리지 않기 위해 꼭 필요하다.
   "1", "2", "3", "4", "5", "6", "7", "8", "9", "0", // 더블 메타폰 변환을 위해 없어져야 한다.
 ];
@@ -54,6 +55,24 @@ String removeEmojis(String source) {
   return result;
 }
 
+String fetch(String source) {
+  print(source);
+  String regex = r"([A-Z|a-z| |ㄱ-ㅎ|ㅏ-ㅣ|가-힣|ぁ-んァ-ンー一-龯])";
+  //영어만 남기면 '를 표현하지 못 하기 때문에 의미가 좀 달라질수도. 그러니까 여기서까지는 '를 포함하고 그 뒤에 로마자로 바꿀 때 빼자.
+  //숫자는 포함 못 해줘서 미안해요 ㅠㅠㅠ
+  //정규식에 포함돼서 그런건진 모르겠지만 | 도 포함이 된다. 그러니 따로 없애주자 ㅎㅎ
+  Iterable<Match> matches = RegExp(regex).allMatches(source);
+
+  String result = "";
+  for (Match match in matches) {
+    result += match.group(0)!;
+  }
+  result = result.replaceAll("|", "");
+  print(result);
+
+  return result;
+}
+
 List<String> module1(String title, String channel) {
   /*
   우타이테 전용 인덱싱
@@ -62,8 +81,6 @@ List<String> module1(String title, String channel) {
 
   title = title.toLowerCase();
   channel = channel.toLowerCase();
-  title = removeEmojis(title);
-  channel = removeEmojis(channel);
   // 불용어 제거
   for (String keyword in stopwords) {
     title = title.replaceAll(keyword, '');
@@ -90,21 +107,6 @@ List<String> module1(String title, String channel) {
     titleSplit = newTitleSplit;
   }
 
-  // //띄어쓰기로 한 번 더 나누자
-  // newChannelSplit = [];
-  // for (String str in channelSplit) {
-  //   newChannelSplit.addAll(str.split(" "));
-  // }
-  // channelSplit.addAll(newChannelSplit);
-
-  // newTitleSplit = [];
-  // for (String str in titleSplit) {
-  //   newTitleSplit.addAll(str.split(" "));
-  // }
-  // titleSplit.addAll(newTitleSplit);
-
-  //그리고 splt때문에 비어있는 부분들 없애주자.
-
   for (int i = 0; i < titleSplit.length; i++) {
     titleSplit[i] = titleSplit[i].trim();
   }
@@ -120,19 +122,12 @@ List<String> module1(String title, String channel) {
   channelSplit.remove(" ");
   titleSplit.remove(" ");
 
-  return titleSplit + channelSplit;
-}
-
-final String apiUrl = 'https://api.openai.com/v1/chat/completions';
-
-List<String> splitSpace(List<String> input) {
-  List<String> newInputSplit = [];
-  for (String str in input) {
-    newInputSplit.addAll(str.split(" "));
+  for (int i = 0; i < channelSplit.length; i++) {
+    channelSplit[i] = fetch(channelSplit[i]);
   }
-  input.addAll(newInputSplit);
+  for (int i = 0; i < titleSplit.length; i++) {
+    titleSplit[i] = fetch(titleSplit[i]);
+  }
 
-  input = input.toSet().toList();
-
-  return input;
+  return titleSplit + channelSplit;
 }

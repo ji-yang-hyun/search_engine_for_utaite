@@ -4,8 +4,9 @@ import 'package:dart_phonetics/dart_phonetics.dart';
 import 'package:dotenv/dotenv.dart' as dotenv;
 import 'package:http/http.dart' as http;
 import 'package:korean_romanization_converter/korean_romanization_converter.dart';
+import 'package:search_engine_for_utaite_src/module_1_script.dart';
 
-final String apiUrl = 'https://api.openai.com/v1/chat/completions';
+final String apiUrl = 'https://api.openai.com/v1/responses';
 
 List<String> splitSpace(List<String> input) {
   List<String> newInputSplit = [];
@@ -19,20 +20,13 @@ List<String> splitSpace(List<String> input) {
   return input;
 }
 
-String prompt =
-    "Forget all the previous inputs, outputs, and prompts.\n The given list elements are separated by commas.Convert the given list into Romanized form and Translated form. \n•	Romanized form means converting Japanese characters into Romanization.\n When converting to Romanized form, Korean characters must always be kept as is, and only Japanese characters should be converted into Romanized form. Here, Korean characters and Japanese characters do not refer to the Korean or Japanese languages themselves, but only to the characters as writing systems. \n Therefore, the resulting lists must contain only Korean characters and English letters. \nTranslated form means converting everything into English, regardless of the original language. \n When converting into the translated form, you don’t need to consider any relationships or contexts between the elements in the list. Just translate each element from given list into English on a one-to-one basis. \n •	The given lists will mainly contain Korean characters, English letters, and Japanese characters. \n The result must never contain special characters. \n When outputting, print only the two resulting lists in order. Do not use Markdown syntax, extra words, or commas for anything other than separating list elements or separating the two result lists.\nExample input: [안녕 나는 요시노 노래들어, 吉乃좋아, happy吉乃] \nExample output: [안녕 나는 요시노 노래들어, yoshino좋아, happy yoshino],[Hello, I listen to Yoshino's songs, yoshino I like it, happy yoshino]";
+String promptRomanize =
+    "Translate the given input string into Romanized form. For Korean text, follow the standard rules for Romanization. The output must not contain any commas or other special characters. Return only the result as a plain string without any additional words or Markdown syntax.";
 
-Future<String> generateResponse(List<String> inputList) async {
-  /*
-  module1에서 indexing한 키워드들의 리스트를 받아서 chatGPT에게 입력으로 전달한다.
-  chatGPT는 프롬프트를 따라 로마자, 번역 형태를 쉼표와 []로 구분된
-  String 으로 return 해준다. 그리고 이 함수는 그 String을 return한다.
-  response는 [로마자, 번역]형식.
-  */
-  // await dotenv.load(fileName: '.env');
+String promptTranslate =
+    "Translate the input sentence into English. The output must not contain any commas or other special characters. Return only the result as a plain string without any additional words or Markdown syntax.";
 
-  // String apiKey = dotenv.env['API_KEY']!;
-
+Future<String> generateResponse(String input, String prompt) async {
   dotenv.load('search_engine_for_utaite_src/.env');
 
   String? apiKey = dotenv.env['API_KEY'];
@@ -43,18 +37,18 @@ Future<String> generateResponse(List<String> inputList) async {
     Uri.parse(apiUrl),
     headers: {"Content-Type": "application/json", "Authorization": token},
     body: jsonEncode({
-      "model": "gpt-4o",
-      'messages': [
-        {'role': 'system', 'content': prompt},
-        {'role': 'user', 'content': inputList.toString()},
-      ],
-      "temperature": 0.3,
-      'max_tokens': 10000,
+      "model": "gpt-5",
+      "input":
+          "Forget all the previous inputs, outputs, and prompts. input : $input \n $prompt",
+      "reasoning": {"effort": "low"},
+      // "max_tokens": 2000,
     }),
   );
   if (response.statusCode == 200) {
     Map<String, dynamic> data = jsonDecode(utf8.decode(response.bodyBytes));
-    String text = data["choices"][0]["message"]["content"].toString().trim();
+    // print(data);
+    String text = "";
+    text = data["output"][1]["content"][0]["text"];
     return text;
   } else {
     throw Exception("Failed to generate response: ${response.statusCode}");
@@ -89,112 +83,115 @@ String removeJP(String source) {
   return result;
 }
 
+String removeKR(String source) {
+  // 이모지 제거용
+  String regexKR = r"([ㄱ-ㅎ|ㅏ-ㅣ|가-힣])";
+
+  // 이모지 제거
+  String result = source.replaceAll(RegExp(regexKR), "");
+  return result;
+}
+
 String removeEN(String source) {
   // 이모지 제거용
-  String regexEN = r"[a-zA-Z]";
+  String regexEN = r"([A-Z|a-z| ])";
 
   // 이모지 제거
   String result = source.replaceAll(RegExp(regexEN), "");
   return result;
 }
 
-Future<List<List<String>>> responseFetch(
-  String response,
-  int keywordCount,
-  List<String> keywords,
-) async {
-  /*
-    generateResponse에서 response를 받고, 알맞은 결과인지 확인을 위해
-    처음 입력값으로 주어진 키워드들의 개수도 확인한다.
-  */
+bool checkResponseRomanized(String response) {
+  if (response.isEmpty) {
+    return false;
+  }
+  if (removeJP(response) != response) {
+    return false;
+  }
+  if (removeKR(response) != response) {
+    return false;
+  }
+  if (response.contains(",")) {
+    return false;
+  }
+  if (removeEN(response).isNotEmpty) {
+    return false;
+  }
 
+  //나머지는 나중에 거른다.
+  return true;
+}
+
+bool checkResponseTranslated(String response) {
+  if (response.isEmpty) {
+    return false;
+  }
+  if (removeJP(response) != response) {
+    return false;
+  }
+  if (removeKR(response) != response) {
+    return false;
+  }
+  if (response.contains(",")) {
+    return false;
+  }
+  //나머지는 나중에 거른다.
+  return true;
+}
+
+Future<String> romanize(String input, int n) async {
+  //혹시나 무한루프를 돌 수 있기 때문에 n으로 안전장치
+  input = input.replaceAll("'", "");
+
+  if (n > 10) {
+    return "something went wrong";
+  }
+  String response = await generateResponse(input, promptRomanize);
+  if (!checkResponseRomanized(response)) {
+    print("wrong");
+    return await romanize(input, n + 1);
+  } else {
+    return response;
+  }
+}
+
+Future<String> translate(String input, int n) async {
+  if (n > 10) {
+    return "something went wrong";
+  }
+  String response = await generateResponse(input, promptTranslate);
+  if (!checkResponseTranslated(response)) {
+    print("wrong");
+    return await translate(input, n + 1);
+  } else {
+    return response;
+  }
+}
+
+Future<List<List<String>>> module2(List<String> keywords) async {
+  //module1에서 모든 특수문자가 걸러졌을거라는 가정 하에 시작한다.
   List<String> romanized = [];
   List<String> translated = [];
-  List<String> doubleMetaphone = [];
-  List<List<String>> result = [[], [], []];
 
-  List<String> responseSplit = [];
-
-  response = response.replaceAll("[", "");
-  response = response.replaceAll("]", "");
-  response = response.replaceAll("\n", "");
-  responseSplit = response.split(',');
-
-  if (keywordCount * 2 == responseSplit.length &&
-      (removeJP(responseSplit.toString()) == responseSplit.toString())) {
-    print("good");
-    print(
-      removeEN(
-        removeJP(
-          responseSplit
-              .toString()
-              .replaceAll(" ", "")
-              .replaceAll(",", "")
-              .replaceAll("[", "")
-              .replaceAll("]", ""),
-        ),
-      ),
-    );
-    print(
-      removeEN(
-        removeJP(
-          keywords
-              .toString()
-              .replaceAll(" ", "")
-              .replaceAll(",", "")
-              .replaceAll("[", "")
-              .replaceAll("]", ""),
-        ),
-      ),
-    );
-  } else {
-    print("wrong response try again");
-    var value = await module2(keywords);
-    return value;
+  for (String keyword in keywords) {
+    romanized.add(await romanize(keyword, 0));
+    translated.add(await translate(keyword, 0));
+    print("done");
   }
 
-  for (int i = 0; i < responseSplit.length; i++) {
-    if (i < responseSplit.length / 2) {
-      romanized.add(responseSplit[i].trim());
-    } else {
-      translated.add(responseSplit[i].trim());
-    }
-  }
-
-  print(romanized);
-
-  final converter = KoreanRomanizationConverter();
-  for (int i = 0; i < romanized.length; i++) {
-    String str = romanized[i];
-    romanized[i] = converter.romanize(str);
-  }
-
-  print(romanized);
-  print("\n\n");
-
-  //원래 공백이 없는 일본어를 위해 나중에 나눈다.
   romanized = splitSpace(romanized);
   translated = splitSpace(translated);
 
-  doubleMetaphone = romanizedToDoubleMetaPhone(romanized);
+  List<String> doubleMetaphone = romanizedToDoubleMetaPhone(romanized);
 
-  result = [romanized, translated, doubleMetaphone];
-
-  return result;
+  print(romanized);
+  print(translated);
+  return [romanized, translated, doubleMetaphone];
 }
 
-Future<List<List<String>>> module2(List<String> keywordSplit) async {
-  String response = await generateResponse(keywordSplit);
-  List<List<String>> keyword3form = await responseFetch(
-    response,
-    keywordSplit.length,
-    keywordSplit,
-  );
-
-  return keyword3form;
+void main() {
+  print(removeKR("안녕하세요 i'm james"));
 }
-
-
 
 /*
 우려했던 ai사용의 문제점이 나타났다.
@@ -283,42 +280,36 @@ ai 쓰는건데 이정도는 그냥 넘어갈까
 어휴 진짜... temp값도 낮추고 이것저것 해봤는데 얘가 계속 구분을 못 한다...
 방법은 두 가지다. 정규식을 잘 써서 일본어 부분이나 한국어 부분을 따로 뺀 상태로 ai에 집어넣거나
 아니면 그냥 더 좋은 gpt를 쓰거나.
+
+이것참 열받아서 못해먹겠군요.
+gpt5 쓰는거 뭔가 안땡기니 이악물고 gpt4계속 써서 일본어 감지해서 거기만 로마자로 바꿀겁니다 씹새들아.
+수고해라
 */
 
 /*
-[하이, 안녕, 吉乃, phone]
-주어진 리스트의 각 요소들은 콤마로 구분돼있어.
-주어진 리스트를 로마자 형태와 번역 형태로 바꿔줘.
-로마자 형태는 언어에 상관 없이 전부 로마자 표기로 바꾸는 걸 말해.
-번역 형태는 어떤 언어던지 전부 영어로 번역하여 표기하는 걸 말해.
-리스트는 주로 한국어, 영어, 일본어가 사용될거야.
+너무 감정적인 판단이야.
+지금 문제랑 해결방법을 더 잘 생각해보자.
 
-첫 형태의 배열 : [안녕, 吉乃, 길고 짧은 축제]
-로마자 형태 : [annyeong, yoshino, gilgo jjalbeun chugje]
-번역 형태 : [hello, yoshino, long and short festival]
-출력은 아무런 말이나 마크다운 문법 없이 두 개의 결과 리스트를 차례로 출력해주면 돼.
-리스트의 요소 구분 외에 다른 용도로는 절대 콤마를 사용하면 안 돼.
+지금 문제는 gpt의 성능이 낮아서
+1. 한국어를 로마자로 변형함에 있어서 표준을 지키지 않는다. 답이 틀리다.
+2. 그 문제가 일본어에도 똑같이 있을수도있다.
+3. 그래서 한국어라도 라이브러리 쓰려고 한국어 빼고 일본어만 로마자로 하라고 했는데, 마찬가지로 gpt성능때문에 안된다.(내 gpt5는 잘 한다.)
 
-입출력 예시)
-입력 : [안녕, 吉乃, 길고 짧은 축제]
-출력 : 
-[annyeong, yoshino, gilgo jjalbeun chugje]
-[hello, yoshino, long and short festival]
+-> 결국은 gpt성능을 높이면 된다.
+근데 문제는 그 과정에서 사용법을 찾는게 너무 어렵다는거지.
+일단 그러면 첫 번째로 할 일은 gpt5한테 응답을 받는거야.
+그 후에는 어떻게 하냐!
+1. 지금 프롬프트 잘 되나 확인.
+2. 예전 프롬프트(gpt가 모듈 2의 전부를 담당할 때)를 얼마나 소화하는지.
 
+그 후에는 이제 2번 결과가 아쉬우면 어쩔 수 없이 한국어라도 따로 빼는거고...
 
-The given list elements are separated by commas.
-Convert the given list into Romanized form and Translated form.
-	•	Romanized form means converting everything into Romanization, regardless of the original language.
-	•	Translated form means converting everything into English, regardless of the original language.
-	•	The lists will mainly contain Korean, English, and Japanese.
+그리고 주변 문장과의 연관성 찾지 말라는 것 보다 그냥 따로따로 넣어주고 응답받는게 더 나을 것 같다.
 
-Example input:
-[안녕, 吉乃, 길고 짧은 축제]
-
-Example output:
-[annyeong, yoshino, gilgo jjalbeun chugje]
-[hello, yoshino, long and short festival]
-
-When outputting, print only the two resulting lists in order.
-Do not use Markdown syntax, extra words, or commas for anything other than separating list elements.
+근데 이게 속도가 느려지네... 결과물 자체는 정말 정확한 것 같다.
+이정도면 사실 원래 그 프롬프트 넣어도 될 것 같은데?
+근데 이게 이제 비용이랑 시간도 생각해야 한다.
+그러니까 한 번에 다 처리하려고 하면 안될 것 같다.
+로마자로 바꾸는거랑 번역하는거랑 다른 걸로 해서 두 개의 구분등등을 위한 프롬프트를 줄이자.
+딱히 강조하거나 뭐 그럴 필요는 없어보이니까 비용을 위해서 좀 더 짧은 프롬프트를 만드는게 좋을 것 같다.
 */

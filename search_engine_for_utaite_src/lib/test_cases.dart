@@ -15,7 +15,7 @@ List<String> testCases = [
   "그래서 나는 음악을 그만두었다 (요루시카) ／다즈비 COVER 13",
   "DAZBEE (ダズビー) | ‘野兎と海亀 (Parallel World)’ M/V",
   "재 즈 소 비| 요아소비 재즈 편곡 플리 III (2025) [playlist]",
-  "シャンティ(SHANTI) [wotaku] 아카네 리제(Akane Lize) ",
+  "シャンティ(SHANTI) [wotaku] 아카네 리제(Akane Lize)",
 ];
 
 // List<String> test_cases = [];
