@@ -3,7 +3,6 @@ import 'dart:math';
 // import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:dart_phonetics/dart_phonetics.dart';
 import 'package:dotenv/dotenv.dart' as dotenv;
-import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:korean_romanization_converter/korean_romanization_converter.dart';
 import 'package:plagiarism_checker_plus/plagiarism_checker_plus.dart';
@@ -390,14 +389,17 @@ double Max(double a, double b) {
     return b;
 }
 
-List<String> inputToDoubleMetaPhone(String inputText) {
-  final converter = KoreanRomanizationConverter();
-  var romanizedInputText = converter.romanize(inputText);
+List<String> inputToDoubleMetaPhone(String romanizedInputText) {
   // print(romanizedInputText);
   final doubleMetaphone = DoubleMetaphone.withMaxLength(100);
   final encoding = doubleMetaphone.encode(romanizedInputText);
   List<String> doubleMetaphoneInputText = [encoding?.primary ?? ""];
   doubleMetaphoneInputText += encoding!.alternates!.toList();
+
+  if (doubleMetaphoneInputText.length != 2) {
+    print("wrong");
+    doubleMetaphoneInputText += doubleMetaphoneInputText;
+  }
 
   return doubleMetaphoneInputText;
 }
@@ -419,8 +421,7 @@ double comparisonString(String input, String target) {
   int cnt = levenshteinDistance(target, input);
 
   //더블 메타폰 형태의 유사도 점수.
-
-  double point = (input.length - cnt) / input.length;
+  double point = cnt / input.length;
 
   return point;
 }
@@ -460,90 +461,168 @@ int levenshteinDistance(String a, String b) {
     }
   }
 
-  // print(al);
-  // print(bl);
-  // print(matrix);
-
   result = matrix[bl.length - 1][al.length - 1];
   return result;
 }
 
-double comparisonDMP(List<String> inputDMPList, List<String> targetDMPList) {
-  double max = 0;
+List<double> comparisonDMP(
+  List<String> inputDMPList,
+  List<dynamic> targetDMPList,
+  List<String> inputRomanized,
+  List<dynamic> targetRomanized,
+) {
+  double min = -1;
   double point;
-  String match = "";
+  String matchT = "";
+  String matchI = "";
   for (String inputDMP in inputDMPList) {
     for (String targetDMP in targetDMPList) {
       point = comparisonString(inputDMP, targetDMP);
-      if (point > max) {
-        max = point;
-        match = targetDMP;
+      if (point < min || min < 0) {
+        min = point;
+        matchT = targetDMP;
+        matchI = inputDMP;
       }
     }
   }
+  double indexOfTd = targetDMPList.indexOf(matchT) / 2;
+  int indexOfT = indexOfTd.floor();
 
-  print(match);
+  double indexOfId = inputDMPList.indexOf(matchI) / 2;
+  int indexOfI = indexOfId.floor();
 
-  return max;
+  double editDistance =
+      levenshteinDistance(inputRomanized[indexOfI], targetRomanized[indexOfT]) +
+      0.0;
+
+  // double editDistance = 0;
+
+  print("DMP match : $matchT | $matchI");
+  print(min);
+
+  return [min, editDistance];
 }
 
-double comparisonTrans(List<String> inputList, List<String> targetList) {
+double comparisonTrans(
+  List<String> inputList,
+  List<dynamic> targetList,
+  double w,
+) {
   var checker = PlagiarismCheckerPlus();
   double max = 0;
-  String match = "";
+  String matchT = "";
+  String matchI = "";
   for (String input in inputList) {
     for (String target in targetList) {
       var result = checker.check(input, target);
       print(result.similarityScore);
       if (max < result.similarityScore) {
         max = result.similarityScore;
-        match = target;
+        matchT = target;
+        matchI = input;
       }
     }
   }
 
-  print(match);
+  print("Trans match : $matchT | $matchI");
 
-  return max;
+  return (1 - max) * w;
+}
+
+int customCompareTo(
+  var a,
+  var b,
+  List<double> songsPoints,
+  List<double> editDistances,
+  List<String> transOrDMP,
+) {
+  /*
+  1, 0, -1을 return 해야한다.
+  */
+
+  if (songsPoints[a["number"]].compareTo(songsPoints[b["number"]]) == 0) {
+    if (transOrDMP[a["number"]] == "D" && transOrDMP[b["number"]] == "D") {
+      return editDistances[a["number"]].compareTo(editDistances[b["number"]]);
+    } else {
+      return 0;
+    }
+  } else {
+    return songsPoints[a["number"]].compareTo(songsPoints[b["number"]]);
+  }
 }
 
 Future<List<Map<String, dynamic>>> searchModule(String input) async {
+  double w = 1; //번역과 더블 메타폰 사이의 가중치
   if (input.isEmpty) {
     return [];
   }
   List<String> inputDMPList = [];
   List<String> inputTransList = [];
+  List<String> inputRomanized = [];
   List<String> inputKeywordList = module1(input, "");
   for (String keyword in inputKeywordList) {
-    inputDMPList += inputToDoubleMetaPhone(keyword);
+    final converter = KoreanRomanizationConverter();
+    var romanizedInputText = converter.romanize(keyword);
+    inputRomanized.add(romanizedInputText);
+    inputDMPList += inputToDoubleMetaPhone(romanizedInputText);
     inputTransList.add(await inputToTrans(input));
   }
 
   List<Map<String, dynamic>> songs = searchCases;
+  List<double> songsDMPPoints = [];
   List<double> songsPoints = [];
-  List<dynamic> songsLog = [];
+  List<String> transOrDMP = [];
+  List<double> editDistances = [];
+  // List<int> songsNums = [for (var song in searchCases) song["number"]];
 
   for (Map<String, dynamic> song in songs) {
-    List<String> keyword = [];
-    List<String> romanized = [];
-    List<String> translated = [];
-    List<String> doubleMetaphone = [];
+    if (song["number"] == 0) {
+      songsPoints.add(0);
+      songsDMPPoints.add(0.0);
+      transOrDMP.add("T");
+      editDistances.add(100);
+      continue;
+    }
+    List<dynamic> keyword = [];
+    List<dynamic> romanized = [];
+    List<dynamic> translated = [];
+    List<dynamic> doubleMetaphone = [];
     romanized = song["search_tag"][0];
     translated = song["search_tag"][1];
     doubleMetaphone = song["search_tag"][2];
 
     print(song["title"]);
-    double transPoint = comparisonTrans(inputTransList, translated);
-    double doubleMetaPhonePoint = comparisonDMP(inputDMPList, doubleMetaphone);
-    double point = Max(transPoint, doubleMetaPhonePoint);
-    print(point);
+    double transPoint = comparisonTrans(inputTransList, translated, w);
+    double doubleMetaPhonePoint = 0.0;
+    double editDistance = 0.0;
+    List<dynamic> comparisonDMPresult = comparisonDMP(
+      inputDMPList,
+      doubleMetaphone,
+      inputRomanized,
+      romanized,
+    );
+    doubleMetaPhonePoint = comparisonDMPresult[0];
+    editDistance = comparisonDMPresult[1];
+
+    songsDMPPoints.add(doubleMetaPhonePoint);
+    editDistances.add(editDistance);
+
+    if (doubleMetaPhonePoint <= transPoint) {
+      transOrDMP.add("D");
+      songsPoints.add(doubleMetaPhonePoint);
+    } else {
+      transOrDMP.add("T");
+      songsPoints.add(transPoint);
+    }
+
     print("\n\n");
-    songsPoints.add(point);
   }
 
-  List<Map<String, dynamic>> songsSorted = songs.toList();
+  print(songsPoints);
+
+  List<Map<String, dynamic>> songsSorted = List.from(songs);
   songsSorted.sort(
-    (a, b) => songsPoints[a["number"]].compareTo(songsPoints[b["number"]]),
+    (a, b) => customCompareTo(a, b, songsPoints, editDistances, transOrDMP),
   );
 
   return songsSorted;
